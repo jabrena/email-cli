@@ -5,6 +5,7 @@ import picocli.CommandLine.Command;
 
 import java.util.concurrent.Callable;
 
+import info.jab.cli.command.DeleteEmailsCommand;
 import info.jab.cli.command.EmailConfig;
 import info.jab.cli.command.ListEmailsCommand;
 import info.jab.cli.command.ListFoldersCommand;
@@ -16,10 +17,11 @@ import info.jab.email.EmailClientBuilder;
  */
 @Command(
         name = "email-cli",
-        description = "Email CLI tool for listing folders, emails, and filtering",
+        description = "Email CLI tool for listing folders, emails, filtering, and deleting",
         subcommands = {
                 ListFoldersCommand.class,
-                ListEmailsCommand.class
+                ListEmailsCommand.class,
+                DeleteEmailsCommand.class
         },
         mixinStandardHelpOptions = true,
         usageHelpAutoWidth = true
@@ -28,6 +30,7 @@ public class EmailCli implements Callable<Integer> {
 
     private final ListFoldersCommand listFoldersCommand;
     private final ListEmailsCommand listEmailsCommand;
+    private final DeleteEmailsCommand deleteEmailsCommand;
 
     /**
      * Constructor for production use.
@@ -45,6 +48,7 @@ public class EmailCli implements Callable<Integer> {
 
         this.listFoldersCommand = new ListFoldersCommand(emailClient);
         this.listEmailsCommand = new ListEmailsCommand(emailClient);
+        this.deleteEmailsCommand = new DeleteEmailsCommand(emailClient);
     }
 
     /**
@@ -52,10 +56,12 @@ public class EmailCli implements Callable<Integer> {
      *
      * @param listFoldersCommand the list-folders command instance (if null, uses annotation-based command)
      * @param listEmailsCommand the list-emails command instance (if null, uses annotation-based command)
+     * @param deleteEmailsCommand the delete-emails command instance (if null, uses annotation-based command)
      */
-    public EmailCli(ListFoldersCommand listFoldersCommand, ListEmailsCommand listEmailsCommand) {
+    public EmailCli(ListFoldersCommand listFoldersCommand, ListEmailsCommand listEmailsCommand, DeleteEmailsCommand deleteEmailsCommand) {
         this.listFoldersCommand = listFoldersCommand;
         this.listEmailsCommand = listEmailsCommand;
+        this.deleteEmailsCommand = deleteEmailsCommand;
     }
 
     @Override
@@ -88,6 +94,9 @@ public class EmailCli implements Callable<Integer> {
         }
         if (cli.listEmailsCommand != null) {
             commandLine.addSubcommand("list-emails", cli.listEmailsCommand);
+        }
+        if (cli.deleteEmailsCommand != null) {
+            commandLine.addSubcommand("delete-emails", cli.deleteEmailsCommand);
         }
 
         return commandLine;

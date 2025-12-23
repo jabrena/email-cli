@@ -11,9 +11,6 @@ import picocli.CommandLine.Parameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -27,7 +24,7 @@ import java.util.concurrent.Callable;
         name = "list-emails",
         description = "List emails in a folder with optional filtering"
 )
-public class ListEmailsCommand implements Callable<Integer> {
+public class ListEmailsCommand extends EmailFilterCommand implements Callable<Integer> {
 
     private final EmailClient emailClient;
 
@@ -48,72 +45,6 @@ public class ListEmailsCommand implements Callable<Integer> {
     }
 
     @Option(
-            names = {"--unread"},
-            description = "Filter unread emails"
-    )
-    private boolean unread;
-
-    @Option(
-            names = {"--read"},
-            description = "Filter read emails"
-    )
-    private boolean read;
-
-    @Option(
-            names = {"--from"},
-            description = "Filter emails from sender (email address or name)"
-    )
-    private String from;
-
-    @Option(
-            names = {"--subject"},
-            description = "Filter emails with subject containing text"
-    )
-    private String subject;
-
-    @Option(
-            names = {"--body"},
-            description = "Filter emails with body containing text"
-    )
-    private String body;
-
-    @Option(
-            names = {"--to"},
-            description = "Filter emails sent to recipient"
-    )
-    private String to;
-
-    @Option(
-            names = {"--cc"},
-            description = "Filter emails CC'd to recipient"
-    )
-    private String cc;
-
-    @Option(
-            names = {"--received-after"},
-            description = "Filter emails received after date (format: yyyy-MM-dd)"
-    )
-    private String receivedAfter;
-
-    @Option(
-            names = {"--received-before"},
-            description = "Filter emails received before date (format: yyyy-MM-dd)"
-    )
-    private String receivedBefore;
-
-    @Option(
-            names = {"--sent-after"},
-            description = "Filter emails sent after date (format: yyyy-MM-dd)"
-    )
-    private String sentAfter;
-
-    @Option(
-            names = {"--sent-before"},
-            description = "Filter emails sent before date (format: yyyy-MM-dd)"
-    )
-    private String sentBefore;
-
-    @Option(
             names = {"--text"},
             description = "Output results in plain text format (default is JSON)"
     )
@@ -126,12 +57,7 @@ public class ListEmailsCommand implements Callable<Integer> {
 
             EmailSearch search = buildSearchTerm();
 
-            List<Message> messages;
-            if (search != null) {
-                messages = client.listEmails(folder, search.build());
-            } else {
-                messages = client.listEmails(folder);
-            }
+            List<Message> messages = client.listEmails(folder, search != null ? search.build() : null);
 
             if (messages.isEmpty()) {
                 if (text) {
@@ -159,72 +85,6 @@ public class ListEmailsCommand implements Callable<Integer> {
         }
     }
 
-    private EmailSearch buildSearchTerm() {
-        EmailSearch search = null;
-
-        if (unread) {
-            search = combineSearch(search, EmailSearch.unread());
-        }
-        if (read) {
-            search = combineSearch(search, EmailSearch.read());
-        }
-        if (from != null && !from.isBlank()) {
-            search = combineSearch(search, EmailSearch.from(from));
-        }
-        if (subject != null && !subject.isBlank()) {
-            search = combineSearch(search, EmailSearch.subjectContains(subject));
-        }
-        if (body != null && !body.isBlank()) {
-            search = combineSearch(search, EmailSearch.bodyContains(body));
-        }
-        if (to != null && !to.isBlank()) {
-            search = combineSearch(search, EmailSearch.to(to));
-        }
-        if (cc != null && !cc.isBlank()) {
-            search = combineSearch(search, EmailSearch.cc(cc));
-        }
-        if (receivedAfter != null && !receivedAfter.isBlank()) {
-            try {
-                LocalDate date = LocalDate.parse(receivedAfter, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                search = combineSearch(search, EmailSearch.receivedAfter(date));
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("Invalid date format for --received-after. Use yyyy-MM-dd format.");
-            }
-        }
-        if (receivedBefore != null && !receivedBefore.isBlank()) {
-            try {
-                LocalDate date = LocalDate.parse(receivedBefore, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                search = combineSearch(search, EmailSearch.receivedBefore(date));
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("Invalid date format for --received-before. Use yyyy-MM-dd format.");
-            }
-        }
-        if (sentAfter != null && !sentAfter.isBlank()) {
-            try {
-                LocalDate date = LocalDate.parse(sentAfter, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                search = combineSearch(search, EmailSearch.sentAfter(date));
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("Invalid date format for --sent-after. Use yyyy-MM-dd format.");
-            }
-        }
-        if (sentBefore != null && !sentBefore.isBlank()) {
-            try {
-                LocalDate date = LocalDate.parse(sentBefore, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                search = combineSearch(search, EmailSearch.sentBefore(date));
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("Invalid date format for --sent-before. Use yyyy-MM-dd format.");
-            }
-        }
-
-        return search;
-    }
-
-    private EmailSearch combineSearch(EmailSearch existing, EmailSearch newSearch) {
-        if (existing == null) {
-            return newSearch;
-        }
-        return existing.and(newSearch);
-    }
 
     private void outputText(List<Message> messages, String folder) {
         System.out.println("Emails in folder '" + folder + "' (" + messages.size() + "):");

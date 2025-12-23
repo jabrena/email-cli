@@ -1,5 +1,6 @@
 package info.jab.email;
 
+import jakarta.mail.Flags;
 import jakarta.mail.Folder;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
@@ -60,27 +61,6 @@ public class EmailClientImpl implements EmailClient {
     }
 
     @Override
-    public List<Message> listEmails(String folder) {
-        List<Message> messageList = new ArrayList<>();
-
-        try {
-            ProtocolConfiguration protocolConfig = ProtocolConfiguration.fromPort(imapPort);
-            try (EmailStoreConnection connection = new EmailStoreConnection(hostname, imapPort, user, password, protocolConfig)) {
-                Message[] messages = connection.getMessages(folder);
-                logger.info("Total emails in {}: {}", folder, messages.length);
-                for (Message message : messages) {
-                    messageList.add(message);
-                }
-            }
-        } catch (IllegalArgumentException | MessagingException e) {
-            logger.error("Error listing emails from folder {}: {}", folder, e.getMessage(), e);
-            return messageList;
-        }
-
-        return messageList;
-    }
-
-    @Override
     public List<Message> listEmails(String folder, SearchTerm searchTerm) {
         List<Message> messageList = new ArrayList<>();
 
@@ -88,13 +68,17 @@ public class EmailClientImpl implements EmailClient {
             ProtocolConfiguration protocolConfig = ProtocolConfiguration.fromPort(imapPort);
             try (EmailStoreConnection connection = new EmailStoreConnection(hostname, imapPort, user, password, protocolConfig)) {
                 Message[] messages = connection.searchMessages(folder, searchTerm);
-                logger.info("Total emails matching search criteria in {}: {}", folder, messages.length);
+                if (searchTerm == null) {
+                    logger.info("Total emails in {}: {}", folder, messages.length);
+                } else {
+                    logger.info("Total emails matching search criteria in {}: {}", folder, messages.length);
+                }
                 for (Message message : messages) {
                     messageList.add(message);
                 }
             }
         } catch (IllegalArgumentException | MessagingException e) {
-            logger.error("Error searching emails from folder {}: {}", folder, e.getMessage(), e);
+            logger.error("Error listing emails from folder {}: {}", folder, e.getMessage(), e);
             return messageList;
         }
 
@@ -111,6 +95,43 @@ public class EmailClientImpl implements EmailClient {
             return true;
         } catch (MessagingException e) {
             logger.error("Error sending email to {}: {}", email.to(), e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteEmails(String folder, SearchTerm searchTerm) {
+        logger.info("Deleting emails from folder: {} matching search criteria", folder);
+        try {
+            ProtocolConfiguration protocolConfig = ProtocolConfiguration.fromPort(imapPort);
+            try (EmailStoreConnection connection = new EmailStoreConnection(hostname, imapPort, user, password, protocolConfig)) {
+                Folder emailFolder = connection.getStore().getFolder(folder);
+                emailFolder.open(Folder.READ_WRITE);
+                try {
+                    // Search for messages matching the search term
+                    Message[] messagesToDelete = emailFolder.search(searchTerm);
+                    logger.info("Found {} emails matching search criteria in folder {}", messagesToDelete.length, folder);
+
+                    if (messagesToDelete.length == 0) {
+                        logger.info("No emails found matching search criteria");
+                        return false;
+                    }
+
+                    // Mark all matching messages as deleted
+                    for (Message message : messagesToDelete) {
+                        message.setFlag(Flags.Flag.DELETED, true);
+                    }
+
+                    // Expunge to permanently remove all deleted messages
+                    emailFolder.expunge();
+                    logger.info("Successfully deleted {} emails from folder {}", messagesToDelete.length, folder);
+                    return true;
+                } finally {
+                    emailFolder.close(false);
+                }
+            }
+        } catch (IllegalArgumentException | MessagingException e) {
+            logger.error("Error deleting emails from folder {}: {}", folder, e.getMessage(), e);
             return false;
         }
     }

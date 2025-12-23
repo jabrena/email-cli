@@ -68,7 +68,14 @@ public class EmailStoreConnection implements Closeable {
         Folder folder = store.getFolder(folderName);
         folder.open(Folder.READ_ONLY);
         try {
-            Message[] messages = folder.search(searchTerm);
+            Message[] messages;
+            if (searchTerm == null) {
+                // If no search term, get all messages
+                messages = folder.getMessages();
+            } else {
+                // Use search for filtering
+                messages = folder.search(searchTerm);
+            }
             // Prefetch message headers so they can be accessed after folder is closed
             if (messages.length > 0) {
                 FetchProfile fetchProfile = new FetchProfile();
@@ -84,6 +91,16 @@ public class EmailStoreConnection implements Closeable {
     public Folder[] getFolders() throws MessagingException {
         Folder defaultFolder = store.getDefaultFolder();
         return defaultFolder.list();
+    }
+
+    /**
+     * Gets the underlying Store instance.
+     * This is needed for operations that require direct Store access, such as deletion.
+     *
+     * @return the Store instance
+     */
+    public Store getStore() {
+        return store;
     }
 
     @Override

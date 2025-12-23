@@ -122,15 +122,6 @@
                     <testFailureIgnore>false</testFailureIgnore>
                     <!-- Stop after first failure for faster feedback -->
                     <skipAfterFailureCount>1</skipAfterFailureCount>
-                    <!-- Suppress SLF4J warnings and enable ByteBuddy experimental mode for Java 25/GraalVM -->
-                    <argLine>
-                        -Dorg.slf4j.simpleLogger.defaultLogLevel=warn 
-                        -Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener
-                        -Dnet.bytebuddy.experimental=true
-                        -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.17.5/byte-buddy-agent-1.17.5.jar
-                        --add-opens=java.base/java.lang=ALL-UNNAMED
-                        --add-opens=java.base/java.util=ALL-UNNAMED
-                    </argLine>
                 </configuration>
                 <dependencies>
                     <!-- Ensure logback-classic is available to Surefire plugin -->

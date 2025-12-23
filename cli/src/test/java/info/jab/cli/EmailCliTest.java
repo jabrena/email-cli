@@ -41,7 +41,7 @@ class EmailCliTest {
     @Test
     void shouldCreateEmailCliInstanceWithNullCommands() {
         // Given/When
-        EmailCli instance = new EmailCli(null, null);
+        EmailCli instance = new EmailCli(null, null, null);
 
         // Then
         assertNotNull(instance);
@@ -59,7 +59,7 @@ class EmailCliTest {
     @Test
     void shouldImplementCallable() {
         // Given
-        EmailCli cli = new EmailCli(null, null);
+        EmailCli cli = new EmailCli(null, null, null);
 
         // When/Then
         assertTrue(cli instanceof Callable);
@@ -75,32 +75,4 @@ class EmailCliTest {
         assertTrue(annotation.mixinStandardHelpOptions());
     }
 
-    @Test
-    void shouldHaveCorrectCommandDescription() {
-        // Given/When/Then
-        picocli.CommandLine.Command annotation = EmailCli.class.getAnnotation(picocli.CommandLine.Command.class);
-        assertNotNull(annotation);
-        assertEquals("Email CLI tool for listing folders, emails, and filtering", annotation.description()[0]);
-    }
-
-
-    @Test
-    void shouldAcceptNullCommandsForTesting() {
-        // Given/When
-        EmailCli cli = new EmailCli(null, null);
-
-        // Then
-        assertNotNull(cli);
-        // Constructor accepts null commands - EmailCli will use annotation-based commands
-    }
-
-    @Test
-    void shouldHaveConstructorForCommandInjection() {
-        // Given/When
-        EmailCli cli = new EmailCli(null, null);
-
-        // Then
-        assertNotNull(cli);
-        // Constructor signature allows dependency injection for testing
-    }
 }

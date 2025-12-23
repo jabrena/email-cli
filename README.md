@@ -5,7 +5,7 @@ A CLI tool to handle emails in an easy way
 - [x] Get emails
 - [x] Search email
 - [x] Send email
-- [ ] Delete email
+- [x] Delete email
 
 ## How to build in local?
 
@@ -19,6 +19,11 @@ java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --from "se
 java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --subject "urgent"
 java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --unread --received-after "2025-12-01"
 java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --read --received-after "2025-12-01"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar delete-emails INBOX --unread
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar delete-emails INBOX --from "sender@example.com"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar delete-emails INBOX --subject "spam"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar delete-emails INBOX --received-before "2024-01-01"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar delete-emails INBOX --unread --from "sender@example.com"
 ```
 
 ## References

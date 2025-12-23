@@ -187,7 +187,7 @@ class EmailClientIT {
             // Given: Empty inbox
 
             // When: List emails
-            List<Message> messages = emailClient.listEmails(INBOX_FOLDER);
+            List<Message> messages = emailClient.listEmails(INBOX_FOLDER, null);
 
             // Then: Should return empty list
             assertThat(messages).isNotNull();
@@ -215,7 +215,7 @@ class EmailClientIT {
             greenMail.getUserManager().getUser(TEST_USER).deliver(message2);
 
             // When: List emails
-            List<Message> messages = emailClient.listEmails(INBOX_FOLDER);
+            List<Message> messages = emailClient.listEmails(INBOX_FOLDER, null);
 
             // Then: Verify correct number of emails
             assertThat(messages).isNotNull();
@@ -243,7 +243,7 @@ class EmailClientIT {
             greenMail.getUserManager().getUser(TEST_USER).deliver(testMessage);
 
             // When: List emails
-            List<Message> messages = sslClient.listEmails(INBOX_FOLDER);
+            List<Message> messages = sslClient.listEmails(INBOX_FOLDER, null);
 
             // Then: Should return a list with at least one email
             assertThat(messages).isNotNull();
@@ -265,7 +265,7 @@ class EmailClientIT {
                     .build();
 
             // When: List emails
-            List<Message> messages = invalidClient.listEmails(INBOX_FOLDER);
+            List<Message> messages = invalidClient.listEmails(INBOX_FOLDER, null);
 
             // Then: Should return empty list
             assertThat(messages).isNotNull();
@@ -286,7 +286,7 @@ class EmailClientIT {
                     .build();
 
             // When: List emails
-            List<Message> messages = invalidClient.listEmails(INBOX_FOLDER);
+            List<Message> messages = invalidClient.listEmails(INBOX_FOLDER, null);
 
             // Then: Should return empty list
             assertThat(messages).isNotNull();
@@ -299,7 +299,7 @@ class EmailClientIT {
             // Given: Valid EmailClient instance
 
             // When: List emails from non-existent folder
-            List<Message> messages = emailClient.listEmails("NON_EXISTENT_FOLDER");
+            List<Message> messages = emailClient.listEmails("NON_EXISTENT_FOLDER", null);
 
             // Then: Should return empty list
             assertThat(messages).isNotNull();
@@ -324,7 +324,7 @@ class EmailClientIT {
             }
 
             // When: List emails
-            List<Message> messages = emailClient.listEmails(INBOX_FOLDER);
+            List<Message> messages = emailClient.listEmails(INBOX_FOLDER, null);
 
             // Then: Verify correct number of emails
             assertThat(messages).isNotNull();
@@ -763,6 +763,244 @@ class EmailClientIT {
             // For now, we accept that MailHog is lenient and doesn't validate addresses
             // Note: With MailHog, this may return true, which is why we don't assert false
             assertThat(result).isNotNull(); // Just verify method completes
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteEmails() with SearchTerm tests")
+    class DeleteEmailsWithSearchTermTests {
+
+        @Test
+        @DisplayName("Should delete emails matching search term successfully")
+        void should_deleteEmailsMatchingSearchTermSuccessfully() throws MessagingException {
+            // Given: Add test emails from different senders
+            Session session = greenMail.getImap().createSession();
+            MimeMessage message1 = createTestMessage(session, "boss@example.com", TEST_USER, "Important", "Body 1");
+            MimeMessage message2 = createTestMessage(session, "colleague@example.com", TEST_USER, "Meeting", "Body 2");
+            MimeMessage message3 = createTestMessage(session, "boss@example.com", TEST_USER, "Urgent", "Body 3");
+
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message1);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message2);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message3);
+
+            int initialCount = getEmailCountFromGreenMail();
+            assertThat(initialCount).isEqualTo(3);
+
+            // When: Delete emails from boss
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, EmailSearch.from("boss@example.com").toSearchTerm());
+
+            // Then: Should delete 2 emails and return true
+            assertThat(deleted).isTrue();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(1);
+
+            // Verify remaining email is from colleague
+            List<Message> remainingMessages = emailClient.listEmails(INBOX_FOLDER, null);
+            assertThat(remainingMessages).hasSize(1);
+            assertThat(remainingMessages.get(0).getFrom()[0].toString()).contains("colleague@example.com");
+        }
+
+        @Test
+        @DisplayName("Should delete all unread emails successfully")
+        void should_deleteAllUnreadEmailsSuccessfully() throws MessagingException {
+            // Given: Add test emails and mark some as read
+            Session session = greenMail.getImap().createSession();
+            MimeMessage message1 = createTestMessage(session, "sender1@example.com", TEST_USER, "Subject 1", "Body 1");
+            MimeMessage message2 = createTestMessage(session, "sender2@example.com", TEST_USER, "Subject 2", "Body 2");
+            MimeMessage message3 = createTestMessage(session, "sender3@example.com", TEST_USER, "Subject 3", "Body 3");
+
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message1);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message2);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message3);
+
+            // Mark first message as read
+            markMessageAsRead(message1);
+
+            int initialCount = getEmailCountFromGreenMail();
+            assertThat(initialCount).isEqualTo(3);
+
+            // When: Delete all unread emails
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, EmailSearch.unread().toSearchTerm());
+
+            // Then: Should delete 2 unread emails and return true
+            assertThat(deleted).isTrue();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(1);
+
+            // Verify remaining email is the read one
+            List<Message> remainingMessages = emailClient.listEmails(INBOX_FOLDER, null);
+            assertThat(remainingMessages).hasSize(1);
+            assertThat(remainingMessages.get(0).getSubject()).isEqualTo("Subject 1");
+        }
+
+        @Test
+        @DisplayName("Should delete emails by subject successfully")
+        void should_deleteEmailsBySubjectSuccessfully() throws MessagingException {
+            // Given: Add test emails with different subjects
+            Session session = greenMail.getImap().createSession();
+            MimeMessage message1 = createTestMessage(session, "sender1@example.com", TEST_USER, "Urgent: Action Required", "Body 1");
+            MimeMessage message2 = createTestMessage(session, "sender2@example.com", TEST_USER, "Meeting Notes", "Body 2");
+            MimeMessage message3 = createTestMessage(session, "sender3@example.com", TEST_USER, "Urgent: Deadline", "Body 3");
+
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message1);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message2);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message3);
+
+            int initialCount = getEmailCountFromGreenMail();
+            assertThat(initialCount).isEqualTo(3);
+
+            // When: Delete emails with "Urgent" in subject
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, EmailSearch.subjectContains("Urgent").toSearchTerm());
+
+            // Then: Should delete 2 emails and return true
+            assertThat(deleted).isTrue();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(1);
+
+            // Verify remaining email is "Meeting Notes"
+            List<Message> remainingMessages = emailClient.listEmails(INBOX_FOLDER, null);
+            assertThat(remainingMessages).hasSize(1);
+            assertThat(remainingMessages.get(0).getSubject()).isEqualTo("Meeting Notes");
+        }
+
+        @Test
+        @DisplayName("Should return false when no emails match search term")
+        void should_returnFalse_when_noEmailsMatchSearchTerm() throws MessagingException {
+            // Given: Add test emails
+            Session session = greenMail.getImap().createSession();
+            MimeMessage message1 = createTestMessage(session, "sender1@example.com", TEST_USER, "Subject 1", "Body 1");
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message1);
+
+            int initialCount = getEmailCountFromGreenMail();
+            assertThat(initialCount).isEqualTo(1);
+
+            // When: Try to delete emails from non-existent sender
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, EmailSearch.from("nonexistent@example.com").toSearchTerm());
+
+            // Then: Should return false and email should still exist
+            assertThat(deleted).isFalse();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should return false when deleting from empty folder")
+        void should_returnFalse_when_deletingFromEmptyFolder() {
+            // Given: Empty inbox
+            List<Message> messages = emailClient.listEmails(INBOX_FOLDER, null);
+            assertThat(messages).isEmpty();
+
+            // When: Try to delete emails matching any criteria
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, EmailSearch.unread().toSearchTerm());
+
+            // Then: Should return false
+            assertThat(deleted).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should delete emails with complex search criteria successfully")
+        void should_deleteEmailsWithComplexSearchCriteriaSuccessfully() throws MessagingException {
+            // Given: Add test emails
+            Session session = greenMail.getImap().createSession();
+            MimeMessage message1 = createTestMessage(session, "boss@example.com", TEST_USER, "Urgent Task", "Body 1");
+            MimeMessage message2 = createTestMessage(session, "boss@example.com", TEST_USER, "Regular Task", "Body 2");
+            MimeMessage message3 = createTestMessage(session, "colleague@example.com", TEST_USER, "Urgent Task", "Body 3");
+
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message1);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message2);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message3);
+
+            int initialCount = getEmailCountFromGreenMail();
+            assertThat(initialCount).isEqualTo(3);
+
+            // When: Delete emails from boss AND with "Urgent" in subject
+            EmailSearch search = EmailSearch.from("boss@example.com")
+                    .and(EmailSearch.subjectContains("Urgent"));
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, search.toSearchTerm());
+
+            // Then: Should delete 1 email matching both criteria and return true
+            assertThat(deleted).isTrue();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("Should return false when deleting fails due to incorrect port")
+        void should_returnFalse_when_deletingFailsDueToIncorrectPort() throws MessagingException {
+            // Given: EmailClient with incorrect IMAP port
+            int invalidImapPort = 9999;
+            EmailClient invalidClient = EmailClientBuilder.builder()
+                    .hostname(TEST_HOST)
+                    .imapPort(invalidImapPort)
+                    .smtpPort(smtpPort)
+                    .user(TEST_USER)
+                    .password(TEST_PASSWORD)
+                    .build();
+
+            // Add a test email using valid client
+            Session session = greenMail.getImap().createSession();
+            MimeMessage testMessage = createTestMessage(session, "sender@example.com", TEST_USER, "Test Subject", "Test Body");
+            greenMail.getUserManager().getUser(TEST_USER).deliver(testMessage);
+
+            // When: Try to delete using invalid client
+            boolean deleted = invalidClient.deleteEmails(INBOX_FOLDER, EmailSearch.unread().toSearchTerm());
+
+            // Then: Should return false and email should still exist
+            assertThat(deleted).isFalse();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should return false when deleting fails due to incorrect credentials")
+        void should_returnFalse_when_deletingFailsDueToIncorrectCredentials() throws MessagingException {
+            // Given: EmailClient with incorrect password
+            String invalidPassword = "wrongpassword";
+            EmailClient invalidClient = EmailClientBuilder.builder()
+                    .hostname(TEST_HOST)
+                    .imapPort(imapPort)
+                    .smtpPort(smtpPort)
+                    .user(TEST_USER)
+                    .password(invalidPassword)
+                    .build();
+
+            // Add a test email using valid client
+            Session session = greenMail.getImap().createSession();
+            MimeMessage testMessage = createTestMessage(session, "sender@example.com", TEST_USER, "Test Subject", "Test Body");
+            greenMail.getUserManager().getUser(TEST_USER).deliver(testMessage);
+
+            // When: Try to delete using invalid client
+            boolean deleted = invalidClient.deleteEmails(INBOX_FOLDER, EmailSearch.unread().toSearchTerm());
+
+            // Then: Should return false and email should still exist
+            assertThat(deleted).isFalse();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should delete all emails when search term matches all")
+        void should_deleteAllEmails_when_searchTermMatchesAll() throws MessagingException {
+            // Given: Add multiple test emails
+            Session session = greenMail.getImap().createSession();
+            MimeMessage message1 = createTestMessage(session, "sender1@example.com", TEST_USER, "Subject 1", "Body 1");
+            MimeMessage message2 = createTestMessage(session, "sender2@example.com", TEST_USER, "Subject 2", "Body 2");
+            MimeMessage message3 = createTestMessage(session, "sender3@example.com", TEST_USER, "Subject 3", "Body 3");
+
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message1);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message2);
+            greenMail.getUserManager().getUser(TEST_USER).deliver(message3);
+
+            int initialCount = getEmailCountFromGreenMail();
+            assertThat(initialCount).isEqualTo(3);
+
+            // When: Delete all emails (using a search that matches all, like unread)
+            boolean deleted = emailClient.deleteEmails(INBOX_FOLDER, EmailSearch.unread().toSearchTerm());
+
+            // Then: Should delete all 3 emails and return true
+            assertThat(deleted).isTrue();
+            int finalCount = getEmailCountFromGreenMail();
+            assertThat(finalCount).isZero();
         }
     }
 
