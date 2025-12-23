@@ -1,35 +1,52 @@
 package info.jab.cli;
 
+import info.jab.cli.command.DeleteEmailsCommand;
+import info.jab.cli.command.ListEmailsCommand;
+import info.jab.cli.command.ListFoldersCommand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for EmailCli structure and command registration.
- * Note: Command execution tests are limited due to Mockito/ByteBuddy
- * limitations on Java 25/GraalVM that prevent mocking EmailClient interface.
  */
+@ExtendWith(MockitoExtension.class)
+@SuppressWarnings("NullAway.Init")
 class EmailCliTest {
 
-    private PrintStream originalOut;
-    private PrintStream originalErr;
-    private ByteArrayOutputStream outputStream;
-    private ByteArrayOutputStream errorStream;
+    @Mock
+    private ListFoldersCommand mockListFoldersCommand;
+
+    @Mock
+    private ListEmailsCommand mockListEmailsCommand;
+
+    @Mock
+    private DeleteEmailsCommand mockDeleteEmailsCommand;
+
+    private EmailCli emailCliWithMocks;
+    private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream errorStreamCaptor = new ByteArrayOutputStream();
+    private final PrintStream originalOut = System.out;
+    private final PrintStream originalErr = System.err;
 
     @BeforeEach
     void setUp() {
-        originalOut = System.out;
-        originalErr = System.err;
-        outputStream = new ByteArrayOutputStream();
-        errorStream = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outputStream));
-        System.setErr(new PrintStream(errorStream));
+        System.setOut(new PrintStream(outputStreamCaptor));
+        System.setErr(new PrintStream(errorStreamCaptor));
+        emailCliWithMocks = new EmailCli(mockListFoldersCommand, mockListEmailsCommand, mockDeleteEmailsCommand);
     }
 
     @AfterEach
@@ -47,6 +64,14 @@ class EmailCliTest {
         assertNotNull(instance);
     }
 
+    @Test
+    void shouldCreateEmailCliInstanceWithMockedCommands() {
+        // Given/When
+        EmailCli instance = new EmailCli(mockListFoldersCommand, mockListEmailsCommand, mockDeleteEmailsCommand);
+
+        // Then
+        assertNotNull(instance);
+    }
 
     @Test
     void shouldHaveMainMethod() {
@@ -75,4 +100,73 @@ class EmailCliTest {
         assertTrue(annotation.mixinStandardHelpOptions());
     }
 
+    @Test
+    void shouldCallListFoldersCommandWhenExecuted() throws Exception {
+        // Given
+        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+        when(mockListFoldersCommand.call()).thenReturn(0);
+
+        // When
+        int exitCode = commandLine.execute("list-folders");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockListFoldersCommand, times(1)).call();
+    }
+
+    @Test
+    void shouldCallListEmailsCommandWhenExecuted() throws Exception {
+        // Given
+        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+        when(mockListEmailsCommand.call()).thenReturn(0);
+
+        // When
+        int exitCode = commandLine.execute("list-emails", "INBOX");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockListEmailsCommand, times(1)).call();
+    }
+
+    @Test
+    void shouldCallDeleteEmailsCommandWhenExecuted() throws Exception {
+        // Given
+        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+        when(mockDeleteEmailsCommand.call()).thenReturn(0);
+
+        // When
+        int exitCode = commandLine.execute("delete-emails", "INBOX", "--from", "test@example.com");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockDeleteEmailsCommand, times(1)).call();
+    }
+
+    @Test
+    void shouldShowUsageWhenNoSubcommandProvided() throws Exception {
+        // Given
+        EmailCli cli = new EmailCli(null, null, null);
+
+        // When
+        int exitCode = cli.call();
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("email-cli");
+    }
+
+    @Test
+    void shouldShowUsageWhenInvalidCommandProvided() {
+        // Given
+        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+
+        // When
+        int exitCode = commandLine.execute("invalid-command");
+
+        // Then
+        assertThat(exitCode).isNotZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Unknown command");
+    }
 }
