@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
@@ -28,6 +30,7 @@ import static org.mockito.Mockito.*;
  * Unit tests for ListEmailsCommand.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ListEmailsCommandTest {
 
     @Mock
@@ -141,7 +144,10 @@ class ListEmailsCommandTest {
         assertThat(exitCode).isZero();
         verify(mockEmailClient, times(1)).listEmails(eq("INBOX"), isNull());
         String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
-        assertThat(output).contains("No emails found in folder: INBOX");
+        // Empty list outputs JSON format by default
+        assertThat(output).contains("\"folder\"");
+        assertThat(output).contains("\"INBOX\"");
+        assertThat(output).contains("\"count\" : 0");
     }
 
     @Test

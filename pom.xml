@@ -28,6 +28,8 @@
         <assertj.version>3.26.3</assertj.version>
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.4.14</logback.version>
+        <mockito.version>5.20.0</mockito.version>
+        <byte-buddy.version>1.18.2</byte-buddy.version>
 
         <!-- CLI dependencies -->
         <picocli.version>4.7.6</picocli.version>
@@ -134,7 +136,7 @@
                     <dependency>
                         <groupId>net.bytebuddy</groupId>
                         <artifactId>byte-buddy-agent</artifactId>
-                        <version>1.17.5</version>
+                        <version>${byte-buddy.version}</version>
                     </dependency>
                 </dependencies>
             </plugin>
