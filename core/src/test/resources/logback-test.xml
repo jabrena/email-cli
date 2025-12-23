@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Status listener to suppress logback internal status messages -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+
+    <!-- Console appender for test output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Testcontainers logging - reduce verbosity -->
+    <logger name="org.testcontainers" level="INFO" />
+
+    <!-- GreenMail logging -->
+    <logger name="com.icegreen.greenmail" level="WARN" />
+
+    <!-- Jakarta Mail logging -->
+    <logger name="com.sun.mail" level="WARN" />
+
+    <!-- Java Mail logging -->
+    <logger name="jakarta.mail" level="WARN" />
+</configuration>
