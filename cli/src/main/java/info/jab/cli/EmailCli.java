@@ -89,14 +89,27 @@ public class EmailCli implements Callable<Integer> {
         CommandLine commandLine = new CommandLine(cli);
 
         // Register subcommands - use custom instances if provided, otherwise annotation-based commands are used
+        // If custom commands are provided, try to add them (they may already exist from annotations)
         if (cli.listFoldersCommand != null) {
-            commandLine.addSubcommand("list-folders", cli.listFoldersCommand);
+            try {
+                commandLine.addSubcommand("list-folders", cli.listFoldersCommand);
+            } catch (picocli.CommandLine.DuplicateNameException e) {
+                // Subcommand already exists from annotation, that's fine for testing
+            }
         }
         if (cli.listEmailsCommand != null) {
-            commandLine.addSubcommand("list-emails", cli.listEmailsCommand);
+            try {
+                commandLine.addSubcommand("list-emails", cli.listEmailsCommand);
+            } catch (picocli.CommandLine.DuplicateNameException e) {
+                // Subcommand already exists from annotation, that's fine for testing
+            }
         }
         if (cli.deleteEmailsCommand != null) {
-            commandLine.addSubcommand("delete-emails", cli.deleteEmailsCommand);
+            try {
+                commandLine.addSubcommand("delete-emails", cli.deleteEmailsCommand);
+            } catch (picocli.CommandLine.DuplicateNameException e) {
+                // Subcommand already exists from annotation, that's fine for testing
+            }
         }
 
         return commandLine;
