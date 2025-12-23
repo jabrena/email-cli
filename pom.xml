@@ -29,6 +29,10 @@
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.4.14</logback.version>
 
+        <!-- CLI dependencies -->
+        <picocli.version>4.7.6</picocli.version>
+        <jackson.version>2.17.2</jackson.version>
+
         <!-- Maven plugin versions -->
         <maven-plugin-compiler.version>3.14.1</maven-plugin-compiler.version>
         <maven-plugin-enforcer.version>3.6.2</maven-plugin-enforcer.version>
@@ -118,8 +122,15 @@
                     <testFailureIgnore>false</testFailureIgnore>
                     <!-- Stop after first failure for faster feedback -->
                     <skipAfterFailureCount>1</skipAfterFailureCount>
-                    <!-- Suppress SLF4J warnings -->
-                    <argLine>-Dorg.slf4j.simpleLogger.defaultLogLevel=warn -Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener</argLine>
+                    <!-- Suppress SLF4J warnings and enable ByteBuddy experimental mode for Java 25/GraalVM -->
+                    <argLine>
+                        -Dorg.slf4j.simpleLogger.defaultLogLevel=warn 
+                        -Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener
+                        -Dnet.bytebuddy.experimental=true
+                        -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.17.5/byte-buddy-agent-1.17.5.jar
+                        --add-opens=java.base/java.lang=ALL-UNNAMED
+                        --add-opens=java.base/java.util=ALL-UNNAMED
+                    </argLine>
                 </configuration>
                 <dependencies>
                     <!-- Ensure logback-classic is available to Surefire plugin -->
@@ -127,6 +138,12 @@
                         <groupId>ch.qos.logback</groupId>
                         <artifactId>logback-classic</artifactId>
                         <version>${logback.version}</version>
+                    </dependency>
+                    <!-- ByteBuddy agent for Mockito on Java 25/GraalVM -->
+                    <dependency>
+                        <groupId>net.bytebuddy</groupId>
+                        <artifactId>byte-buddy-agent</artifactId>
+                        <version>1.17.5</version>
                     </dependency>
                 </dependencies>
             </plugin>

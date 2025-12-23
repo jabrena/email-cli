@@ -29,6 +29,13 @@ public class EmailConfig {
     }
 
     /**
+     * Package-private constructor for testing purposes.
+     */
+    EmailConfig(String hostname, int imapPort, int smtpPort, String user, String password, boolean test) {
+        this(hostname, imapPort, smtpPort, user, password);
+    }
+
+    /**
      * Loads configuration from .env file.
      * First tries to load from current directory, then from user's home directory.
      *

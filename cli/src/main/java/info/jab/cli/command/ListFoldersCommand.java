@@ -16,11 +16,21 @@ import java.util.concurrent.Callable;
 )
 public class ListFoldersCommand implements Callable<Integer> {
 
+    private final EmailClient emailClient;
+
+    /**
+     * Constructor for dependency injection.
+     *
+     * @param emailClient the EmailClient to use (if null, will load from config)
+     */
+    public ListFoldersCommand(EmailClient emailClient) {
+        this.emailClient = emailClient;
+    }
+
     @Override
     public Integer call() {
         try {
-            EmailConfig config = EmailConfig.load();
-            EmailClient client = createEmailClient(config);
+            EmailClient client = getEmailClient();
 
             List<String> folders = client.listFolders();
 
@@ -42,7 +52,11 @@ public class ListFoldersCommand implements Callable<Integer> {
         }
     }
 
-    private EmailClient createEmailClient(EmailConfig config) {
+    private EmailClient getEmailClient() {
+        if (emailClient != null) {
+            return emailClient;
+        }
+        EmailConfig config = EmailConfig.load();
         return EmailClientBuilder.builder()
                 .hostname(config.getHostname())
                 .imapPort(config.getImapPort())

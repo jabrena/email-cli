@@ -29,12 +29,23 @@ import java.util.concurrent.Callable;
 )
 public class ListEmailsCommand implements Callable<Integer> {
 
+    private final EmailClient emailClient;
+
     @Parameters(
             index = "0",
             description = "Folder name to list emails from (e.g., INBOX)",
             defaultValue = "INBOX"
     )
     private String folder = "INBOX";
+
+    /**
+     * Constructor for dependency injection.
+     *
+     * @param emailClient the EmailClient to use (if null, will load from config)
+     */
+    public ListEmailsCommand(EmailClient emailClient) {
+        this.emailClient = emailClient;
+    }
 
     @Option(
             names = {"--unread"},
@@ -111,8 +122,7 @@ public class ListEmailsCommand implements Callable<Integer> {
     @Override
     public Integer call() {
         try {
-            EmailConfig config = EmailConfig.load();
-            EmailClient client = createEmailClient(config);
+            EmailClient client = getEmailClient();
 
             EmailSearch search = buildSearchTerm();
 
@@ -125,7 +135,7 @@ public class ListEmailsCommand implements Callable<Integer> {
 
             if (messages.isEmpty()) {
                 if (text) {
-                    String message = search != null 
+                    String message = search != null
                         ? "No emails found matching the criteria in folder: " + folder
                         : "No emails found in folder: " + folder;
                     System.out.println(message);
@@ -270,9 +280,9 @@ public class ListEmailsCommand implements Callable<Integer> {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-            
+
             List<EmailInfo> emailInfos = new ArrayList<>();
-            
+
             for (int i = 0; i < messages.size(); i++) {
                 Message msg = messages.get(i);
                 try {
@@ -310,7 +320,7 @@ public class ListEmailsCommand implements Callable<Integer> {
                     // Skip invalid messages
                 }
             }
-            
+
             EmailListResponse response = new EmailListResponse(folder, emailInfos.size(), emailInfos);
             String json = objectMapper.writeValueAsString(response);
             System.out.println(json);
@@ -320,7 +330,11 @@ public class ListEmailsCommand implements Callable<Integer> {
         }
     }
 
-    private EmailClient createEmailClient(EmailConfig config) {
+    private EmailClient getEmailClient() {
+        if (emailClient != null) {
+            return emailClient;
+        }
+        EmailConfig config = EmailConfig.load();
         return EmailClientBuilder.builder()
                 .hostname(config.getHostname())
                 .imapPort(config.getImapPort())
