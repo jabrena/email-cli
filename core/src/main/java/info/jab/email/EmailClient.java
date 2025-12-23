@@ -1,40 +1,45 @@
 package info.jab.email;
 
 import jakarta.mail.Message;
-import jakarta.mail.MessagingException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.mail.search.SearchTerm;
+import java.util.List;
 
-public class EmailClient {
+/**
+ * Interface for email client operations.
+ * Provides methods for listing and sending emails.
+ */
+public interface EmailClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(EmailClient.class);
+    /**
+     * Lists all folders in the email store.
+     *
+     * @return a list of folder names, or an empty list if there is an error accessing the email store
+     */
+    List<String> listFolders();
 
-    private final String hostname;
-    private final int imapPort;
-    private final int smtpPort;
-    private final String user;
-    private final String password;
+    /**
+     * Lists all emails in the specified folder.
+     *
+     * @param folder the folder name to list emails from
+     * @return a list of messages, or an empty list if there is an error accessing the email store
+     */
+    List<Message> listEmails(String folder);
 
-    public EmailClient(String hostname, int imapPort, int smtpPort, String user, String password) {
-        this.hostname = hostname;
-        this.imapPort = imapPort;
-        this.smtpPort = smtpPort;
-        this.user = user;
-        this.password = password;
-    }
+    /**
+     * Lists emails in the specified folder matching the given search term.
+     * Uses server-side filtering for efficient querying.
+     *
+     * @param folder the folder name to list emails from
+     * @param searchTerm the search term for filtering
+     * @return a list of filtered messages, or an empty list if there is an error
+     */
+    List<Message> listEmails(String folder, SearchTerm searchTerm);
 
-    public void listEmails() throws MessagingException {
-        ProtocolConfiguration protocolConfig = ProtocolConfiguration.fromPort(imapPort);
-
-        try (EmailStoreConnection connection = new EmailStoreConnection(hostname, imapPort, user, password, protocolConfig)) {
-            Message[] messages = connection.getMessages();
-            logger.info("Total emails in INBOX: {}", messages.length);
-        }
-    }
-
-    public void sendEmail(String to, String subject, String body) throws MessagingException {
-        logger.info("Sending email");
-        EmailSender sender = new EmailSender(hostname, smtpPort, user, password);
-        sender.send(to, subject, body);
-    }
+    /**
+     * Sends an email.
+     *
+     * @param email the email to send
+     * @return true if the email was sent successfully, false otherwise
+     */
+    boolean send(EmailMessage email);
 }

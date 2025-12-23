@@ -5,6 +5,7 @@ import jakarta.mail.Store;
 import jakarta.mail.Folder;
 import jakarta.mail.Session;
 import jakarta.mail.Message;
+import jakarta.mail.search.SearchTerm;
 import java.io.Closeable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +15,6 @@ public class EmailStoreConnection implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(EmailStoreConnection.class);
 
     private final Store store;
-    private final Folder inbox;
 
     public EmailStoreConnection(String hostname, int imapPort, String user, String password, ProtocolConfiguration protocolConfig) throws MessagingException {
         Session session = SessionFactory.createStoreSession(hostname, imapPort, user, password, protocolConfig);
@@ -44,25 +44,36 @@ public class EmailStoreConnection implements Closeable {
             }
             throw e;
         }
-
-        this.inbox = store.getFolder("INBOX");
-        inbox.open(Folder.READ_ONLY);
     }
 
-    public Message[] getMessages() throws MessagingException {
-        return inbox.getMessages();
+    public Message[] getMessages(String folderName) throws MessagingException {
+        Folder folder = store.getFolder(folderName);
+        folder.open(Folder.READ_ONLY);
+        try {
+            return folder.getMessages();
+        } finally {
+            folder.close(false);
+        }
     }
 
-    public int getMessageCount() throws MessagingException {
-        return inbox.getMessageCount();
+    public Message[] searchMessages(String folderName, SearchTerm searchTerm) throws MessagingException {
+        Folder folder = store.getFolder(folderName);
+        folder.open(Folder.READ_ONLY);
+        try {
+            return folder.search(searchTerm);
+        } finally {
+            folder.close(false);
+        }
+    }
+
+    public Folder[] getFolders() throws MessagingException {
+        Folder defaultFolder = store.getDefaultFolder();
+        return defaultFolder.list();
     }
 
     @Override
     public void close() {
         try {
-            if (inbox != null && inbox.isOpen()) {
-                inbox.close(false);
-            }
             if (store != null && store.isConnected()) {
                 store.close();
             }

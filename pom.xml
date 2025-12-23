@@ -35,6 +35,7 @@
         <extra-enforcer-rules.version>1.11.0</extra-enforcer-rules.version>
         <maven-plugin-surefire.version>3.5.4</maven-plugin-surefire.version>
         <maven-plugin-failsafe.version>3.5.4</maven-plugin-failsafe.version>
+        <maven-plugin-surefire-report.version>3.2.2</maven-plugin-surefire-report.version>
         <maven-plugin-versions.version>2.20.1</maven-plugin-versions.version>
         <maven-plugin-exec.version>3.6.3</maven-plugin-exec.version>
     </properties>
@@ -113,6 +114,10 @@
                     <excludes>
                         <exclude>**/*IT.java</exclude>
                     </excludes>
+                    <!-- Stop execution on test failures -->
+                    <testFailureIgnore>false</testFailureIgnore>
+                    <!-- Stop after first failure for faster feedback -->
+                    <skipAfterFailureCount>1</skipAfterFailureCount>
                     <!-- Suppress SLF4J warnings -->
                     <argLine>-Dorg.slf4j.simpleLogger.defaultLogLevel=warn -Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener</argLine>
                 </configuration>
@@ -136,11 +141,16 @@
                     <excludes>
                         <exclude>**/*Test.java</exclude>
                     </excludes>
+                    <!-- Stop execution on test failures -->
+                    <testFailureIgnore>false</testFailureIgnore>
+                    <!-- Stop after first failure for faster feedback -->
+                    <skipAfterFailureCount>1</skipAfterFailureCount>
                 </configuration>
                 <executions>
                     <execution>
                         <goals>
                             <goal>integration-test</goal>
+                            <goal>verify</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -188,6 +198,25 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
                 <version>${maven-plugin-versions.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>${maven-plugin-surefire-report.version}</version>
+                <executions>
+                    <execution>
+                        <id>aggregate-test-results</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-only</goal>
+                        </goals>
+                        <configuration>
+                            <aggregate>true</aggregate>
+                            <showSuccess>true</showSuccess>
+                            <outputName>surefire-report</outputName>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

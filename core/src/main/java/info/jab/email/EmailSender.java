@@ -25,15 +25,15 @@ public class EmailSender {
         this.session = SessionFactory.createSmtpSession(hostname, smtpPort, user, password);
     }
 
-    public void send(String to, String subject, String body) throws MessagingException {
+    public void send(EmailMessage email) throws MessagingException {
         MimeMessage message = new MimeMessage(session);
         message.setFrom(new InternetAddress(user));
-        message.setRecipient(Message.RecipientType.TO, new InternetAddress(to));
-        message.setSubject(subject);
-        message.setText(body);
+        message.setRecipient(Message.RecipientType.TO, new InternetAddress(email.to()));
+        message.setSubject(email.subject());
+        message.setText(email.body());
 
-        logger.debug("Sending email to: {}, Subject: {}, SMTP server: {}:{}", to, subject, hostname, smtpPort);
+        logger.debug("Sending email to: {}, Subject: {}, SMTP server: {}:{}", email.to(), email.subject(), hostname, smtpPort);
         Transport.send(message);
-        logger.info("Email sent successfully to: {}", to);
+        logger.info("Email sent successfully to: {}", email.to());
     }
 }
