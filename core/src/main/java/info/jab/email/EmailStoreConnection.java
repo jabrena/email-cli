@@ -5,6 +5,7 @@ import jakarta.mail.Store;
 import jakarta.mail.Folder;
 import jakarta.mail.Session;
 import jakarta.mail.Message;
+import jakarta.mail.FetchProfile;
 import jakarta.mail.search.SearchTerm;
 import java.io.Closeable;
 import org.slf4j.Logger;
@@ -50,7 +51,14 @@ public class EmailStoreConnection implements Closeable {
         Folder folder = store.getFolder(folderName);
         folder.open(Folder.READ_ONLY);
         try {
-            return folder.getMessages();
+            Message[] messages = folder.getMessages();
+            // Prefetch message headers so they can be accessed after folder is closed
+            if (messages.length > 0) {
+                FetchProfile fetchProfile = new FetchProfile();
+                fetchProfile.add(FetchProfile.Item.ENVELOPE);
+                folder.fetch(messages, fetchProfile);
+            }
+            return messages;
         } finally {
             folder.close(false);
         }
@@ -60,7 +68,14 @@ public class EmailStoreConnection implements Closeable {
         Folder folder = store.getFolder(folderName);
         folder.open(Folder.READ_ONLY);
         try {
-            return folder.search(searchTerm);
+            Message[] messages = folder.search(searchTerm);
+            // Prefetch message headers so they can be accessed after folder is closed
+            if (messages.length > 0) {
+                FetchProfile fetchProfile = new FetchProfile();
+                fetchProfile.add(FetchProfile.Item.ENVELOPE);
+                folder.fetch(messages, fetchProfile);
+            }
+            return messages;
         } finally {
             folder.close(false);
         }

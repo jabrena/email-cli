@@ -7,6 +7,20 @@ A CLI tool to handle emails in an easy way
 - [x] Send email
 - [ ] Delete email
 
+## How to build in local?
+
+```bash
+./mvnw clean package
+
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-folders
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --unread
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --read
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --from "sender@example.com"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --subject "urgent"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --unread --received-after "2025-12-01"
+java -jar ./cli/target/email-cli-0.1.0-SNAPSHOT.jar list-emails INBOX --read --received-after "2025-12-01"
+```
+
 ## References
 
 - https://datatracker.ietf.org/doc/html/rfc3501
