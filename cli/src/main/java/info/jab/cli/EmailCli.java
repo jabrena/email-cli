@@ -6,11 +6,11 @@ import picocli.CommandLine.Command;
 import java.util.concurrent.Callable;
 
 import info.jab.cli.command.DeleteEmailsCommand;
-import info.jab.cli.command.EmailConfig;
 import info.jab.cli.command.ListEmailsCommand;
 import info.jab.cli.command.ListFoldersCommand;
 import info.jab.email.EmailClient;
 import info.jab.email.EmailClientBuilder;
+import info.jab.email.EmailConfig;
 
 /**
  * Main CLI application for email operations.
@@ -18,11 +18,6 @@ import info.jab.email.EmailClientBuilder;
 @Command(
         name = "email-cli",
         description = "Email CLI tool for listing folders, emails, filtering, and deleting",
-        subcommands = {
-                ListFoldersCommand.class,
-                ListEmailsCommand.class,
-                DeleteEmailsCommand.class
-        },
         mixinStandardHelpOptions = true,
         usageHelpAutoWidth = true
 )
@@ -33,11 +28,11 @@ public class EmailCli implements Callable<Integer> {
     private final DeleteEmailsCommand deleteEmailsCommand;
 
     /**
-     * Constructor for production use.
-     * Loads configuration from EmailConfig and creates EmailClient, then injects it into commands.
+     * Constructor that accepts EmailConfig and creates EmailClient, then injects it into commands.
+     *
+     * @param config the EmailConfig instance
      */
-    public EmailCli() {
-        EmailConfig config = EmailConfig.load();
+    public EmailCli(EmailConfig config) {
         EmailClient emailClient = EmailClientBuilder.builder()
                 .hostname(config.getHostname())
                 .imapPort(config.getImapPort())
@@ -72,7 +67,7 @@ public class EmailCli implements Callable<Integer> {
     }
 
     public static void main(String[] args) {
-        EmailCli cli = new EmailCli();
+        EmailCli cli = new EmailCli(EmailConfig.load());
         CommandLine cmd = createCommandLine(cli);
         int exitCode = cmd.execute(args);
         System.exit(exitCode);
@@ -88,28 +83,15 @@ public class EmailCli implements Callable<Integer> {
     static CommandLine createCommandLine(EmailCli cli) {
         CommandLine commandLine = new CommandLine(cli);
 
-        // Register subcommands - use custom instances if provided, otherwise annotation-based commands are used
-        // If custom commands are provided, try to add them (they may already exist from annotations)
+        // Register subcommands - always register manually to use pre-created instances with injected dependencies
         if (cli.listFoldersCommand != null) {
-            try {
-                commandLine.addSubcommand("list-folders", cli.listFoldersCommand);
-            } catch (picocli.CommandLine.DuplicateNameException e) {
-                // Subcommand already exists from annotation, that's fine for testing
-            }
+            commandLine.addSubcommand("list-folders", cli.listFoldersCommand);
         }
         if (cli.listEmailsCommand != null) {
-            try {
-                commandLine.addSubcommand("list-emails", cli.listEmailsCommand);
-            } catch (picocli.CommandLine.DuplicateNameException e) {
-                // Subcommand already exists from annotation, that's fine for testing
-            }
+            commandLine.addSubcommand("list-emails", cli.listEmailsCommand);
         }
         if (cli.deleteEmailsCommand != null) {
-            try {
-                commandLine.addSubcommand("delete-emails", cli.deleteEmailsCommand);
-            } catch (picocli.CommandLine.DuplicateNameException e) {
-                // Subcommand already exists from annotation, that's fine for testing
-            }
+            commandLine.addSubcommand("delete-emails", cli.deleteEmailsCommand);
         }
 
         return commandLine;

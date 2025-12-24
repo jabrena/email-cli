@@ -3,11 +3,13 @@ package info.jab.cli.command;
 import info.jab.email.EmailClient;
 import jakarta.mail.Address;
 import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -23,8 +25,11 @@ import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.times;
 
 /**
  * Unit tests for ListEmailsCommand.
@@ -72,24 +77,6 @@ class ListEmailsCommandTest {
     void tearDown() {
         System.setOut(originalOut);
         System.setErr(originalErr);
-    }
-
-    @Test
-    void shouldHaveCorrectCommandAnnotation() {
-        // Given/When/Then
-        assertTrue(ListEmailsCommand.class.isAnnotationPresent(picocli.CommandLine.Command.class));
-        picocli.CommandLine.Command annotation = ListEmailsCommand.class.getAnnotation(picocli.CommandLine.Command.class);
-        assertNotNull(annotation);
-        assertEquals("list-emails", annotation.name());
-    }
-
-    @Test
-    void shouldHaveConstructorForDependencyInjection() {
-        // Given/When
-        ListEmailsCommand cmd = new ListEmailsCommand(null);
-
-        // Then
-        assertNotNull(cmd);
     }
 
     @Test
@@ -216,5 +203,214 @@ class ListEmailsCommandTest {
         assertThat(exitCode).isZero();
         String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
         assertThat(output).contains("(No Subject)");
+    }
+
+    @Test
+    void shouldHandleMessageWithNullSentDate() throws Exception {
+        // Given
+        when(mockMessage1.getSentDate()).thenReturn(null);
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).isNotEmpty();
+    }
+
+    @Test
+    void shouldHandleMessageWithEmptyFromArray() throws Exception {
+        // Given
+        when(mockMessage1.getFrom()).thenReturn(new Address[0]);
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Unknown");
+    }
+
+    @Test
+    void shouldHandleMessageWithBlankSubject() throws Exception {
+        // Given
+        when(mockMessage1.getSubject()).thenReturn("   ");
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("(No Subject)");
+    }
+
+    @Test
+    void shouldHandleExceptionWhenGettingFrom() throws Exception {
+        // Given
+        when(mockMessage1.getFrom()).thenThrow(new MessagingException("Error"));
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Unknown");
+    }
+
+    @Test
+    void shouldHandleExceptionWhenGettingSubject() throws Exception {
+        // Given
+        when(mockMessage1.getSubject()).thenThrow(new MessagingException("Error"));
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("(No Subject)");
+    }
+
+    @Test
+    void shouldHandleExceptionWhenGettingSentDate() throws Exception {
+        // Given
+        when(mockMessage1.getSentDate()).thenThrow(new MessagingException("Error"));
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).isNotEmpty();
+    }
+
+    @Test
+    void shouldHandleExceptionWhenProcessingMessage() throws Exception {
+        // Given - Message that throws exception from getFrom(), which is caught by inner try-catch
+        when(mockMessage1.getFrom()).thenThrow(new RuntimeException("Unexpected error"));
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        // Exception from getFrom() is caught by inner try-catch and handled gracefully
+        // The message is still processed with "Unknown" as the from value
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Unknown");
+    }
+
+    @Test
+    void shouldHandleEmptyListWithSearchCriteria() throws Exception {
+        // Given
+        when(mockEmailClient.listEmails(eq("INBOX"), ArgumentMatchers.any())).thenReturn(Collections.emptyList());
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--from", "test@example.com", "--text");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("No emails found matching the criteria");
+    }
+
+    @Test
+    void shouldHandleMessageWithNullFromInJson() throws Exception {
+        // Given
+        when(mockMessage1.getFrom()).thenReturn(null);
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("\"from\" : \"Unknown\"");
+    }
+
+    @Test
+    void shouldHandleMessageWithNullSubjectInJson() throws Exception {
+        // Given
+        when(mockMessage1.getSubject()).thenReturn(null);
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("\"subject\" : \"(No Subject)\"");
+    }
+
+    @Test
+    void shouldHandleMessageWithNullSentDateInJson() throws Exception {
+        // Given
+        // When sentDate is null, the code uses new Date() as default, so sentDate will never be null in EmailInfo
+        // This test verifies the code handles null sentDate gracefully by using current date
+        when(mockMessage1.getSentDate()).thenReturn(null);
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX");
+
+        // Then
+        assertThat(exitCode).isZero();
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        // The code uses new Date() as default when sentDate is null, so sentDate will have a value
+        assertThat(output).contains("\"sentDate\"");
+        assertThat(output).doesNotContain("\"sentDate\" : null");
+    }
+
+    @Test
+    void shouldHandleExceptionInJsonOutput() throws Exception {
+        // Given
+        when(mockMessage1.getFrom()).thenThrow(new RuntimeException("Error"));
+        List<Message> messages = Collections.singletonList(mockMessage1);
+        when(mockEmailClient.listEmails(eq("INBOX"), isNull())).thenReturn(messages);
+        CommandLine commandLine = new CommandLine(command);
+
+        // When
+        int exitCode = commandLine.execute("INBOX");
+
+        // Then
+        assertThat(exitCode).isZero();
+        // Should still output JSON even if some messages fail
+        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).isNotEmpty();
     }
 }

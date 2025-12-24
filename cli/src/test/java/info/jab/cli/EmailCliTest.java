@@ -3,8 +3,11 @@ package info.jab.cli;
 import info.jab.cli.command.DeleteEmailsCommand;
 import info.jab.cli.command.ListEmailsCommand;
 import info.jab.cli.command.ListFoldersCommand;
+import info.jab.email.EmailConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,17 +17,18 @@ import picocli.CommandLine;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.Callable;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for EmailCli structure and command registration.
  */
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("NullAway.Init")
+@DisplayName("EmailCli Tests")
 class EmailCliTest {
 
     @Mock
@@ -55,118 +59,212 @@ class EmailCliTest {
         System.setErr(originalErr);
     }
 
-    @Test
-    void shouldCreateEmailCliInstanceWithNullCommands() {
-        // Given/When
-        EmailCli instance = new EmailCli(null, null, null);
+    @Nested
+    @DisplayName("Command Execution Tests")
+    class CommandExecutionTests {
 
-        // Then
-        assertNotNull(instance);
+        @Test
+        @DisplayName("Should execute list-folders command successfully")
+        void shouldExecuteListFoldersCommand() throws Exception {
+            // Given
+            CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+            when(mockListFoldersCommand.call()).thenReturn(0);
+
+            // When
+            int exitCode = commandLine.execute("list-folders");
+
+            // Then
+            assertThat(exitCode).isZero();
+            verify(mockListFoldersCommand, times(1)).call();
+        }
+
+        @Test
+        @DisplayName("Should execute list-emails command successfully")
+        void shouldExecuteListEmailsCommand() throws Exception {
+            // Given
+            CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+            when(mockListEmailsCommand.call()).thenReturn(0);
+
+            // When
+            int exitCode = commandLine.execute("list-emails", "INBOX");
+
+            // Then
+            assertThat(exitCode).isZero();
+            verify(mockListEmailsCommand, times(1)).call();
+        }
+
+        @Test
+        @DisplayName("Should execute delete-emails command successfully")
+        void shouldExecuteDeleteEmailsCommand() throws Exception {
+            // Given
+            CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+            when(mockDeleteEmailsCommand.call()).thenReturn(0);
+
+            // When
+            int exitCode = commandLine.execute("delete-emails", "INBOX", "--from", "test@example.com");
+
+            // Then
+            assertThat(exitCode).isZero();
+            verify(mockDeleteEmailsCommand, times(1)).call();
+        }
+
+        @Test
+        @DisplayName("Should return non-zero exit code for invalid command")
+        void shouldReturnNonZeroExitCodeForInvalidCommand() {
+            // Given
+            CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+
+            // When
+            int exitCode = commandLine.execute("invalid-command");
+
+            // Then
+            assertThat(exitCode).isNotZero();
+        }
     }
 
-    @Test
-    void shouldCreateEmailCliInstanceWithMockedCommands() {
-        // Given/When
-        EmailCli instance = new EmailCli(mockListFoldersCommand, mockListEmailsCommand, mockDeleteEmailsCommand);
+    @Nested
+    @DisplayName("Usage and Help Tests")
+    class UsageAndHelpTests {
 
-        // Then
-        assertNotNull(instance);
+        @Test
+        @DisplayName("Should show usage when no subcommand is provided")
+        void shouldShowUsageWhenNoSubcommandProvided() throws Exception {
+            // Given
+            EmailCli cli = new EmailCli(null, null, null);
+
+            // When
+            int exitCode = cli.call();
+
+            // Then
+            assertThat(exitCode).isZero();
+            String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+            assertThat(output)
+                    .contains("email-cli")
+                    .contains("Email CLI tool");
+            // Note: When commands are null, they won't appear in usage output
+        }
+
+        @Test
+        @DisplayName("Should show help when --help flag is used")
+        void shouldShowHelpWhenHelpFlagIsUsed() {
+            // Given
+            CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
+
+            // When
+            int exitCode = commandLine.execute("--help");
+
+            // Then
+            assertThat(exitCode).isZero();
+            String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
+            assertThat(output).contains("email-cli");
+        }
     }
 
-    @Test
-    void shouldHaveMainMethod() {
-        // Given/When/Then - Verify main method exists
-        assertDoesNotThrow(() -> {
-            EmailCli.class.getMethod("main", String[].class);
-        });
+    @Nested
+    @DisplayName("CommandLine Creation Tests")
+    class CommandLineCreationTests {
+
+        @Test
+        @DisplayName("Should create CommandLine when all commands are null")
+        void shouldCreateCommandLineWithAllNullCommands() {
+            // Given
+            EmailCli cli = new EmailCli(null, null, null);
+
+            // When
+            CommandLine commandLine = EmailCli.createCommandLine(cli);
+
+            // Then
+            assertThat(commandLine).isNotNull();
+            assertThat(commandLine.getSubcommands()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should create CommandLine and register commands when some are null")
+        void shouldCreateCommandLineWithPartialNullCommands() {
+            // Given
+            EmailCli cli = new EmailCli(mockListFoldersCommand, null, mockDeleteEmailsCommand);
+
+            // When
+            CommandLine commandLine = EmailCli.createCommandLine(cli);
+
+            // Then
+            assertThat(commandLine).isNotNull();
+            assertThat(commandLine.getSubcommands()).containsKeys("list-folders", "delete-emails");
+            assertThat(commandLine.getSubcommands()).doesNotContainKey("list-emails");
+        }
+
+        @Test
+        @DisplayName("Should create CommandLine and register all commands when all are provided")
+        void shouldCreateCommandLineWithAllCommands() {
+            // Given
+            EmailCli cli = new EmailCli(mockListFoldersCommand, mockListEmailsCommand, mockDeleteEmailsCommand);
+
+            // When
+            CommandLine commandLine = EmailCli.createCommandLine(cli);
+
+            // Then
+            assertThat(commandLine).isNotNull();
+            assertThat(commandLine.getSubcommands())
+                    .containsKeys("list-folders", "list-emails", "delete-emails")
+                    .hasSize(3);
+        }
     }
 
-    @Test
-    void shouldImplementCallable() {
-        // Given
-        EmailCli cli = new EmailCli(null, null, null);
+    @Nested
+    @DisplayName("Constructor Tests")
+    class ConstructorTests {
 
-        // When/Then
-        assertTrue(cli instanceof Callable);
-    }
+        @Test
+        @DisplayName("Should create EmailCli with EmailConfig and register all commands")
+        void shouldCreateEmailCliWithEmailConfig() {
+            // Given
+            EmailConfig config = EmailConfig.forTesting("localhost", 143, 25, "test@example.com", "password");
 
-    @Test
-    void shouldHaveCommandAnnotation() {
-        // Given/When/Then
-        assertTrue(EmailCli.class.isAnnotationPresent(picocli.CommandLine.Command.class));
-        picocli.CommandLine.Command annotation = EmailCli.class.getAnnotation(picocli.CommandLine.Command.class);
-        assertNotNull(annotation);
-        assertEquals("email-cli", annotation.name());
-        assertTrue(annotation.mixinStandardHelpOptions());
-    }
+            // When
+            EmailCli cli = new EmailCli(config);
 
-    @Test
-    void shouldCallListFoldersCommandWhenExecuted() throws Exception {
-        // Given
-        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
-        when(mockListFoldersCommand.call()).thenReturn(0);
+            // Then
+            assertThat(cli).isNotNull();
+            CommandLine commandLine = EmailCli.createCommandLine(cli);
+            assertThat(commandLine).isNotNull();
+            assertThat(commandLine.getSubcommands())
+                    .containsKeys("list-folders", "list-emails", "delete-emails")
+                    .hasSize(3);
+        }
 
-        // When
-        int exitCode = commandLine.execute("list-folders");
+        @Test
+        @DisplayName("Should create EmailCli with EmailConfig and register commands correctly")
+        void shouldCreateEmailCliWithEmailConfigAndRegisterCommands() {
+            // Given
+            EmailConfig config = EmailConfig.forTesting("localhost", 143, 25, "test@example.com", "password");
+            EmailCli cli = new EmailCli(config);
 
-        // Then
-        assertThat(exitCode).isZero();
-        verify(mockListFoldersCommand, times(1)).call();
-    }
+            // When
+            CommandLine commandLine = EmailCli.createCommandLine(cli);
 
-    @Test
-    void shouldCallListEmailsCommandWhenExecuted() throws Exception {
-        // Given
-        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
-        when(mockListEmailsCommand.call()).thenReturn(0);
+            // Then - verify all commands are registered
+            assertThat(commandLine.getSubcommands())
+                    .containsKeys("list-folders", "list-emails", "delete-emails")
+                    .hasSize(3);
 
-        // When
-        int exitCode = commandLine.execute("list-emails", "INBOX");
+            // Verify command help can be accessed (without executing the command)
+            CommandLine listFoldersSubcommand = commandLine.getSubcommands().get("list-folders");
+            assertThat(listFoldersSubcommand).isNotNull();
+            assertThat(listFoldersSubcommand.getCommandName()).isEqualTo("list-folders");
+        }
 
-        // Then
-        assertThat(exitCode).isZero();
-        verify(mockListEmailsCommand, times(1)).call();
-    }
+        @Test
+        @DisplayName("Should create EmailCli with dependency injection constructor")
+        void shouldCreateEmailCliWithDependencyInjection() {
+            // Given & When
+            EmailCli cli = new EmailCli(mockListFoldersCommand, mockListEmailsCommand, mockDeleteEmailsCommand);
 
-    @Test
-    void shouldCallDeleteEmailsCommandWhenExecuted() throws Exception {
-        // Given
-        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
-        when(mockDeleteEmailsCommand.call()).thenReturn(0);
-
-        // When
-        int exitCode = commandLine.execute("delete-emails", "INBOX", "--from", "test@example.com");
-
-        // Then
-        assertThat(exitCode).isZero();
-        verify(mockDeleteEmailsCommand, times(1)).call();
-    }
-
-    @Test
-    void shouldShowUsageWhenNoSubcommandProvided() throws Exception {
-        // Given
-        EmailCli cli = new EmailCli(null, null, null);
-
-        // When
-        int exitCode = cli.call();
-
-        // Then
-        assertThat(exitCode).isZero();
-        String output = outputStreamCaptor.toString(StandardCharsets.UTF_8);
-        assertThat(output).contains("email-cli");
-    }
-
-    @Test
-    void shouldShowUsageWhenInvalidCommandProvided() {
-        // Given
-        CommandLine commandLine = EmailCli.createCommandLine(emailCliWithMocks);
-
-        // When
-        int exitCode = commandLine.execute("invalid-command");
-
-        // Then
-        assertThat(exitCode).isNotZero();
-        // Picocli returns non-zero exit code for invalid commands
-        // The output may be empty or contain error message depending on picocli version
+            // Then
+            assertThat(cli).isNotNull();
+            CommandLine commandLine = EmailCli.createCommandLine(cli);
+            assertThat(commandLine).isNotNull();
+            assertThat(commandLine.getSubcommands())
+                    .containsKeys("list-folders", "list-emails", "delete-emails");
+        }
     }
 }

@@ -2,6 +2,7 @@ package info.jab.cli.command;
 
 import info.jab.email.EmailClient;
 import info.jab.email.EmailClientBuilder;
+import info.jab.email.EmailConfig;
 import picocli.CommandLine.Command;
 
 import java.util.List;

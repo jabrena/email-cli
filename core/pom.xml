@@ -34,6 +34,12 @@
             <artifactId>jakarta.activation</artifactId>
             <version>${jakarta.activation.version}</version>
         </dependency>
+        <!-- Dotenv for .env file support -->
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>${dotenv.version}</version>
+        </dependency>
 
         <!-- Testcontainers for integration testing -->
         <dependency>

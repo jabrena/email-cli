@@ -31,13 +31,6 @@
             <version>${picocli.version}</version>
         </dependency>
 
-        <!-- Dotenv for .env file support -->
-        <dependency>
-            <groupId>io.github.cdimascio</groupId>
-            <artifactId>dotenv-java</artifactId>
-            <version>${dotenv.version}</version>
-        </dependency>
-
         <!-- Logback for logging -->
         <dependency>
             <groupId>ch.qos.logback</groupId>

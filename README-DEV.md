@@ -22,6 +22,8 @@
 # Run integration tests
 ./mvnw clean verify
 
+./mvnw clean test verify site -Pjacoco
+
 # Check for dependency updates
 ./mvnw versions:display-property-updates
 ./mvnw versions:display-dependency-updates
@@ -30,5 +32,6 @@
 # Generate project reports
 ./mvnw site
 jwebserver -p 8005 -d "$(pwd)/target/site/"
+jwebserver -p 8015 -d "$(pwd)/jacoco-report-aggregated/target/site/"
 ```
 

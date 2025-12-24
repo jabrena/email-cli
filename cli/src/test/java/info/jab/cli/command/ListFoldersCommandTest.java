@@ -16,8 +16,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for ListFoldersCommand.
@@ -45,25 +46,6 @@ class ListFoldersCommandTest {
     void tearDown() {
         System.setOut(originalOut);
         System.setErr(originalErr);
-    }
-
-    @Test
-    void shouldHaveCorrectCommandAnnotation() {
-        // Given/When/Then
-        assertTrue(ListFoldersCommand.class.isAnnotationPresent(picocli.CommandLine.Command.class));
-        picocli.CommandLine.Command annotation = ListFoldersCommand.class.getAnnotation(picocli.CommandLine.Command.class);
-        assertNotNull(annotation);
-        assertEquals("list-folders", annotation.name());
-        assertEquals("List all folders in the email store", annotation.description()[0]);
-    }
-
-    @Test
-    void shouldHaveConstructorForDependencyInjection() {
-        // Given/When
-        ListFoldersCommand cmd = new ListFoldersCommand(null);
-
-        // Then
-        assertNotNull(cmd);
     }
 
     @Test

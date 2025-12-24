@@ -1,4 +1,4 @@
-package info.jab.cli.command;
+package info.jab.email;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import io.github.cdimascio.dotenv.DotenvException;
@@ -33,6 +33,21 @@ public class EmailConfig {
      */
     EmailConfig(String hostname, int imapPort, int smtpPort, String user, String password, boolean test) {
         this(hostname, imapPort, smtpPort, user, password);
+    }
+
+    /**
+     * Creates an EmailConfig instance for testing purposes.
+     * This method is intended for use in tests and should not be used in production code.
+     *
+     * @param hostname the email server hostname
+     * @param imapPort the IMAP port
+     * @param smtpPort the SMTP port
+     * @param user the email user
+     * @param password the email password
+     * @return a new EmailConfig instance
+     */
+    public static EmailConfig forTesting(String hostname, int imapPort, int smtpPort, String user, String password) {
+        return new EmailConfig(hostname, imapPort, smtpPort, user, password);
     }
 
     /**

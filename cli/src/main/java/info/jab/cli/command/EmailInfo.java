@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 /**
  * Email information model for JSON output.
@@ -18,7 +19,7 @@ public record EmailInfo(
     /**
      * Factory method to create EmailInfo from a Message with date conversion.
      */
-    public static EmailInfo fromMessage(int index, String from, String subject, java.util.Date sentDate) {
+    public static EmailInfo fromMessage(int index, String from, String subject, Date sentDate) {
         String formattedDate = null;
         if (sentDate != null) {
             Instant instant = sentDate.toInstant();

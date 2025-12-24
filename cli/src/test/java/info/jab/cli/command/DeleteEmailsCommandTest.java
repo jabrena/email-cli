@@ -15,9 +15,13 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 /**
  * Unit tests for DeleteEmailsCommand.
@@ -47,24 +51,6 @@ class DeleteEmailsCommandTest {
     void tearDown() {
         System.setOut(originalOut);
         System.setErr(originalErr);
-    }
-
-    @Test
-    void shouldHaveCorrectCommandAnnotation() {
-        // Given/When/Then
-        assertTrue(DeleteEmailsCommand.class.isAnnotationPresent(picocli.CommandLine.Command.class));
-        picocli.CommandLine.Command annotation = DeleteEmailsCommand.class.getAnnotation(picocli.CommandLine.Command.class);
-        assertNotNull(annotation);
-        assertEquals("delete-emails", annotation.name());
-    }
-
-    @Test
-    void shouldHaveConstructorForDependencyInjection() {
-        // Given/When
-        DeleteEmailsCommand cmd = new DeleteEmailsCommand(null);
-
-        // Then
-        assertNotNull(cmd);
     }
 
     @Test
@@ -166,5 +152,170 @@ class DeleteEmailsCommandTest {
         // Then
         assertThat(exitCode).isZero();
         verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptReadFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--read");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptBodyFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--body", "urgent");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptToFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--to", "recipient@example.com");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptCcFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--cc", "cc@example.com");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptReceivedAfterFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--received-after", "2024-01-01");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptReceivedBeforeFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--received-before", "2024-12-31");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptSentAfterFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--sent-after", "2024-01-01");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptSentBeforeFilter() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--sent-before", "2024-12-31");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldAcceptMultipleFilters() throws Exception {
+        // Given
+        when(mockEmailClient.deleteEmails(eq("INBOX"), any(SearchTerm.class))).thenReturn(true);
+
+        // When
+        int exitCode = commandLine.execute("INBOX", "--unread", "--from", "test@example.com", "--subject", "Important");
+
+        // Then
+        assertThat(exitCode).isZero();
+        verify(mockEmailClient, times(1)).deleteEmails(eq("INBOX"), any(SearchTerm.class));
+    }
+
+    @Test
+    void shouldHandleInvalidDateInReceivedAfter() {
+        // Given/When
+        int exitCode = commandLine.execute("INBOX", "--received-after", "invalid-date");
+
+        // Then
+        assertThat(exitCode).isEqualTo(1);
+        verify(mockEmailClient, never()).deleteEmails(anyString(), any(SearchTerm.class));
+        String output = errorStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Invalid date format");
+    }
+
+    @Test
+    void shouldHandleInvalidDateInReceivedBefore() {
+        // Given/When
+        int exitCode = commandLine.execute("INBOX", "--received-before", "2024/01/01");
+
+        // Then
+        assertThat(exitCode).isEqualTo(1);
+        verify(mockEmailClient, never()).deleteEmails(anyString(), any(SearchTerm.class));
+        String output = errorStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Invalid date format");
+    }
+
+    @Test
+    void shouldHandleInvalidDateInSentAfter() {
+        // Given/When
+        int exitCode = commandLine.execute("INBOX", "--sent-after", "01-01-2024");
+
+        // Then
+        assertThat(exitCode).isEqualTo(1);
+        verify(mockEmailClient, never()).deleteEmails(anyString(), any(SearchTerm.class));
+        String output = errorStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Invalid date format");
+    }
+
+    @Test
+    void shouldHandleInvalidDateInSentBefore() {
+        // Given/When
+        int exitCode = commandLine.execute("INBOX", "--sent-before", "not-a-date");
+
+        // Then
+        assertThat(exitCode).isEqualTo(1);
+        verify(mockEmailClient, never()).deleteEmails(anyString(), any(SearchTerm.class));
+        String output = errorStreamCaptor.toString(StandardCharsets.UTF_8);
+        assertThat(output).contains("Invalid date format");
     }
 }
