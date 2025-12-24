@@ -15,4 +15,4 @@ jobs:
           distribution: 'graalvm' # See 'Supported distributions' for available options
           java-version: '25'
       - name: Maven build
-        run: ./mvnw --batch-mode --no-transfer-progress verify --file pom.xml
+        run: ./mvnw --batch-mode --no-transfer-progress test verify site -Pjacoco --file pom.xml
