@@ -41,7 +41,7 @@
         <extra-enforcer-rules.version>1.11.0</extra-enforcer-rules.version>
         <maven-plugin-surefire.version>3.5.4</maven-plugin-surefire.version>
         <maven-plugin-failsafe.version>3.5.4</maven-plugin-failsafe.version>
-        <maven-plugin-surefire-report.version>3.2.2</maven-plugin-surefire-report.version>
+        <maven-plugin-surefire-report.version>3.5.4</maven-plugin-surefire-report.version>
         <maven-plugin-versions.version>2.20.1</maven-plugin-versions.version>
         <maven-plugin-exec.version>3.6.3</maven-plugin-exec.version>
         <maven-plugin-jacoco.version>0.8.13</maven-plugin-jacoco.version>
